@@ -31,7 +31,8 @@ def main(args):
     current_root_path = os.path.split(sys.argv[0])[0]
 
     sadtalker_paths = init_path(args.checkpoint_dir, os.path.join(current_root_path, 'src/config'), args.size, args.old_version, args.preprocess)
-
+    # sadtalker_paths = {'checkpoint': 'SadTalker_V0.0.2_256.safetensors'}
+    
     #init model
     preprocess_model = CropAndExtract(sadtalker_paths, device)
 
@@ -43,7 +44,7 @@ def main(args):
     first_frame_dir = os.path.join(save_dir, 'first_frame_dir')
     os.makedirs(first_frame_dir, exist_ok=True)
     print('3DMM Extraction for source image')
-    first_coeff_path, crop_pic_path, crop_info =  preprocess_model.generate(pic_path, first_frame_dir, args.preprocess,\
+    first_coeff_path, crop_pic_path, crop_info_list =  preprocess_model.generate(pic_path, first_frame_dir, args.preprocess,\
                                                                              source_image_flag=True, pic_size=args.size)
     if first_coeff_path is None:
         print("Can't get the coeffs of the input")
@@ -84,7 +85,7 @@ def main(args):
                                 batch_size, input_yaw_list, input_pitch_list, input_roll_list,
                                 expression_scale=args.expression_scale, still_mode=args.still, preprocess=args.preprocess, size=args.size)
     
-    result = animate_from_coeff.generate(data, save_dir, pic_path, crop_info, \
+    result = animate_from_coeff.generate(data, save_dir, pic_path, crop_info_list, \
                                 enhancer=args.enhancer, background_enhancer=args.background_enhancer, preprocess=args.preprocess, img_size=args.size)
     
     shutil.move(result, save_dir+'.mp4')
@@ -135,6 +136,11 @@ if __name__ == '__main__':
     parser.add_argument('--z_far', type=float, default=15.)
 
     args = parser.parse_args()
+    
+    args.verbose = True
+    args.still = True
+    args.driven_audio = 'resources/female_cartoon_voice2.wav'
+    args.source_image = 'resources/female_human.png'
 
     if torch.cuda.is_available() and not args.cpu:
         args.device = "cuda"

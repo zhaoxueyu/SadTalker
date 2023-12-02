@@ -46,7 +46,11 @@ def split_coeff(coeffs):
 class CropAndExtract():
     def __init__(self, sadtalker_path, device):
 
+        # facexlib 是一个基于 pytorch 的人脸相关功能的库，如检测、对齐、识别、跟踪、人脸修复的工具等。它只提供推理（没有训练）。 这个 repo 是基于当前的 STOA 开源方法（见更多细节）。
+        # self.propress: 使用facexlib进行人脸检测及人来拿关键点检测
         self.propress = Preprocesser(device)
+        
+        # Re: 3DMM模型，用于表情系数β重建
         self.net_recon = networks.define_net_recon(net_recon='resnet50', use_last_fc=False, init_path='').to(device)
         
         if sadtalker_path['use_safetensor']:
@@ -57,7 +61,7 @@ class CropAndExtract():
             self.net_recon.load_state_dict(checkpoint['net_recon'])
 
         self.net_recon.eval()
-        self.lm3d_std = load_lm3d(sadtalker_path['dir_of_BFM_fitting'])
+        self.lm3d_std = load_lm3d(sadtalker_path['dir_of_BFM_fitting']) # src/config/similarity_Lm3D_all.mat
         self.device = device
     
     def generate(self, input_path, save_dir, crop_or_resize='crop', source_image_flag=False, pic_size=256):
@@ -93,22 +97,29 @@ class CropAndExtract():
 
         #### crop images as the 
         if 'crop' in crop_or_resize.lower(): # default crop
-            x_full_frames, crop, quad = self.propress.crop(x_full_frames, still=True if 'ext' in crop_or_resize.lower() else False, xsize=512)
-            clx, cly, crx, cry = crop
-            lx, ly, rx, ry = quad
-            lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
-            oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
-            crop_info = ((ox2 - ox1, oy2 - oy1), crop, quad)
+            x_full_frames, crops, quads = self.propress.crop(x_full_frames, still=True if 'ext' in crop_or_resize.lower() else False, xsize=512)
+            crop_info_list = []
+            for crop, quad in zip(crops, quads):
+                clx, cly, crx, cry = crop
+                lx, ly, rx, ry = quad
+                lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
+                oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
+                crop_info_list.append(((ox2 - ox1, oy2 - oy1), crop, quad))
+                lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
+                oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
+                crop_info_list.append(((ox2 - ox1, oy2 - oy1), crop, quad))
         elif 'full' in crop_or_resize.lower():
-            x_full_frames, crop, quad = self.propress.crop(x_full_frames, still=True if 'ext' in crop_or_resize.lower() else False, xsize=512)
-            clx, cly, crx, cry = crop
-            lx, ly, rx, ry = quad
-            lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
-            oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
-            crop_info = ((ox2 - ox1, oy2 - oy1), crop, quad)
+            x_full_frames, crops, quads = self.propress.crop(x_full_frames, still=True if 'ext' in crop_or_resize.lower() else False, xsize=512)
+            crop_info_list = []
+            for crop, quad in zip(crops, quads):
+                clx, cly, crx, cry = crop
+                lx, ly, rx, ry = quad
+                lx, ly, rx, ry = int(lx), int(ly), int(rx), int(ry)
+                oy1, oy2, ox1, ox2 = cly+ly, cly+ry, clx+lx, clx+rx
+                crop_info_list.append(((ox2 - ox1, oy2 - oy1), crop, quad))
         else: # resize mode
             oy1, oy2, ox1, ox2 = 0, x_full_frames[0].shape[0], 0, x_full_frames[0].shape[1] 
-            crop_info = ((ox2 - ox1, oy2 - oy1), None, None)
+            crop_info_list = [((ox2 - ox1, oy2 - oy1), None, None)]
 
         frames_pil = [Image.fromarray(cv2.resize(frame,(pic_size, pic_size))) for frame in x_full_frames]
         if len(frames_pil) == 0:
@@ -167,4 +178,4 @@ class CropAndExtract():
 
             savemat(coeff_path, {'coeff_3dmm': semantic_npy, 'full_3dmm': np.array(full_coeffs)[0]})
 
-        return coeff_path, png_path, crop_info
+        return coeff_path, png_path, crop_info_list

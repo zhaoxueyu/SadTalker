@@ -154,7 +154,7 @@ class AnimateFromCoeff():
 
         return checkpoint['epoch']
 
-    def generate(self, x, video_save_dir, pic_path, crop_info, enhancer=None, background_enhancer=None, preprocess='crop', img_size=256):
+    def generate(self, x, video_save_dir, pic_path, crop_info_list, enhancer=None, background_enhancer=None, preprocess='crop', img_size=256):
 
         source_image=x['source_image'].type(torch.FloatTensor)
         source_semantics=x['source_semantics'].type(torch.FloatTensor)
@@ -195,7 +195,7 @@ class AnimateFromCoeff():
         result = img_as_ubyte(video)
 
         ### the generated video is 256x256, so we keep the aspect ratio, 
-        original_size = crop_info[0]
+        original_size = crop_info_list[0][0]
         if original_size:
             result = [ cv2.resize(result_i,(img_size, int(img_size * original_size[1]/original_size[0]) )) for result_i in result ]
         
@@ -227,7 +227,7 @@ class AnimateFromCoeff():
             video_name_full = x['video_name']  + '_full.mp4'
             full_video_path = os.path.join(video_save_dir, video_name_full)
             return_path = full_video_path
-            paste_pic(path, pic_path, crop_info, new_audio_path, full_video_path, extended_crop= True if 'ext' in preprocess.lower() else False)
+            paste_pic(path, pic_path, crop_info_list, new_audio_path, full_video_path, extended_crop= True if 'ext' in preprocess.lower() else False)
             print(f'The generated video is named {video_save_dir}/{video_name_full}') 
         else:
             full_video_path = av_path 
