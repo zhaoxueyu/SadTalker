@@ -137,10 +137,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
-    args.verbose = True
-    args.still = True
-    args.driven_audio = 'resources/female_cartoon_voice2.wav'
-    args.source_image = 'resources/female_human.png'
+    # args.verbose = True
+    # args.still = True
+    # args.driven_audio = 'resources/female_cartoon_voice2.wav'
+    # args.source_image = 'resources/female_human.png'
 
     if torch.cuda.is_available() and not args.cpu:
         args.device = "cuda"
